@@ -1,0 +1,140 @@
+// Data: Meal Plans
+const meals = [
+    { id: 1, name: "Dal Rice & Veggies", cost: 45, ingredients: "Lentils, Rice, Seasonal Greens", nutrition: "High Protein, Fiber", priceCategory: "50", img: "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&q=80&w=500" },
+    { id: 2, name: "Vegetable Poha", cost: 30, ingredients: "Flattened Rice, Peanuts, Onion", nutrition: "Iron, Carbs", priceCategory: "50", img: "https://images.unsplash.com/photo-1626132646529-5aa733fe3ef6?auto=format&fit=crop&q=80&w=500" },
+    { id: 3, name: "Egg Curry & Roti", cost: 85, ingredients: "Eggs, Whole Wheat Flour, Spices", nutrition: "Vitamin B12, Protein", priceCategory: "100", img: "https://images.unsplash.com/photo-1589412225893-a921ee0995c2?auto=format&fit=crop&q=80&w=500" },
+    { id: 4, name: "Mixed Khichdi", cost: 40, ingredients: "Rice, Moong Dal, Turmeric", nutrition: "Easy Digestion, Balanced", priceCategory: "50", img: "https://images.unsplash.com/photo-1606491956391-70868b5d0f47?auto=format&fit=crop&q=80&w=500" },
+    { id: 5, name: "Soya Chunk Sabji", cost: 70, ingredients: "Soya Chunks, Potatoes, Tomatoes", nutrition: "Plant Protein", priceCategory: "100", img: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&q=80&w=500" }
+];
+
+const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+let plannerState = {
+    Monday: null, Tuesday: null, Wednesday: null, Thursday: null, Friday: null, Saturday: null, Sunday: null
+};
+
+// Initialize UI
+document.addEventListener('DOMContentLoaded', () => {
+    renderMeals('all');
+    renderPlannerChoices();
+    renderWeeklyGrid();
+    initInteractions();
+});
+
+function initInteractions() {
+    // Hamburger Menu
+    const menuBtn = document.getElementById('menuBtn');
+    const mobileMenu = document.getElementById('mobileMenu');
+    menuBtn.addEventListener('click', () => mobileMenu.classList.toggle('hidden'));
+
+    // Dark Mode
+    const toggle = document.getElementById('darkModeToggle');
+    const toggleMobile = document.getElementById('darkModeToggleMobile');
+    const toggleHandler = () => {
+        document.body.classList.toggle('dark');
+        const isDark = document.body.classList.contains('dark');
+        toggle.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        toggleMobile.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    };
+    toggle.addEventListener('click', toggleHandler);
+    toggleMobile.addEventListener('click', toggleHandler);
+
+    // Filtering Logic
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            filterBtns.forEach(b => b.classList.remove('active', 'border-emerald-500', 'text-emerald-600'));
+            btn.classList.add('active', 'border-emerald-500', 'text-emerald-600');
+            renderMeals(btn.dataset.filter);
+        });
+    });
+
+    // Reset Planner
+    document.getElementById('resetPlanner').addEventListener('click', () => {
+        Object.keys(plannerState).forEach(day => plannerState[day] = null);
+        updatePlannerUI();
+    });
+}
+
+function renderMeals(filter) {
+    const grid = document.getElementById('mealGrid');
+    grid.innerHTML = '';
+    
+    const filteredMeals = filter === 'all' ? meals : meals.filter(m => m.priceCategory === filter);
+
+    filteredMeals.forEach(meal => {
+        const card = `
+            <div class="meal-card bg-white rounded-2xl overflow-hidden shadow-sm border border-stone-200">
+                <img src="${meal.img}" class="w-full h-48 object-cover" alt="${meal.name}">
+                <div class="p-6 text-left">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-bold text-xl">${meal.name}</h3>
+                        <span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-sm font-bold">₹${meal.cost}</span>
+                    </div>
+                    <p class="text-sm text-slate-500 mb-4"><i class="fas fa-shopping-basket mr-2"></i>${meal.ingredients}</p>
+                    <div class="flex items-center gap-2 text-xs font-semibold text-emerald-600 uppercase tracking-widest">
+                        <i class="fas fa-heartbeat"></i>
+                        <span>${meal.nutrition}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        grid.innerHTML += card;
+    });
+}
+
+function renderPlannerChoices() {
+    const container = document.getElementById('mealChoices');
+    meals.forEach(meal => {
+        const item = document.createElement('div');
+        item.className = "bg-white/10 p-4 rounded-xl cursor-pointer hover:bg-white/20 transition border border-white/10 flex justify-between items-center";
+        item.innerHTML = `<span>${meal.name}</span> <span class="font-bold">₹${meal.cost}</span>`;
+        item.onclick = () => addToNextAvailableDay(meal);
+        container.appendChild(item);
+    });
+}
+
+function renderWeeklyGrid() {
+    const grid = document.getElementById('weeklyGrid');
+    grid.innerHTML = '';
+    days.forEach(day => {
+        const row = `
+            <div class="flex items-center justify-between p-4 bg-stone-50 rounded-xl border border-stone-200">
+                <span class="font-semibold w-24">${day}</span>
+                <div id="day-${day}" class="flex-1 px-4 text-slate-400 text-sm">No meal selected</div>
+                <div id="cost-${day}" class="font-bold text-emerald-600">₹0</div>
+            </div>
+        `;
+        grid.innerHTML += row;
+    });
+}
+
+function addToNextAvailableDay(meal) {
+    const nextDay = days.find(day => plannerState[day] === null);
+    if (nextDay) {
+        plannerState[nextDay] = meal;
+        updatePlannerUI();
+    } else {
+        alert("Your week is full! Reset to start over.");
+    }
+}
+
+function updatePlannerUI() {
+    let total = 0;
+    days.forEach(day => {
+        const daySlot = document.getElementById(`day-${day}`);
+        const costSlot = document.getElementById(`cost-${day}`);
+        const meal = plannerState[day];
+
+        if (meal) {
+            daySlot.innerHTML = `<span class="text-slate-800 font-medium">${meal.name}</span>`;
+            daySlot.classList.remove('text-slate-400');
+            costSlot.innerText = `₹${meal.cost}`;
+            total += meal.cost;
+        } else {
+            daySlot.innerText = "No meal selected";
+            daySlot.classList.add('text-slate-400');
+            costSlot.innerText = `₹0`;
+        }
+    });
+    document.getElementById('totalCost').innerText = `₹${total}`;
+}
